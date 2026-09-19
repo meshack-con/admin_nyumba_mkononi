@@ -90,6 +90,24 @@ class ApiService {
     return AdminProperty.fromJson(_decodeObject(response));
   }
 
+  /// Matangazo yote (historia kamili), yenye uwezo wa kuchuja kwa status
+  /// (mfano: 'pending', 'approved', 'rejected', 'expired'). Ikiwa
+  /// [statusFilter] ni null, matangazo yote yanarudishwa bila kuchujwa.
+  Future<List<AdminProperty>> getAllProperties({String? statusFilter}) async {
+    final uri = Uri.parse('$baseUrl/admin/properties').replace(
+      queryParameters: statusFilter != null ? {'status_filter': statusFilter} : null,
+    );
+    final response = await http.get(uri, headers: _headers);
+    return _decodeList(response).map((e) => AdminProperty.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Admin anafuta tangazo la nyumba kabisa kutoka kwenye mfumo. Hatua hii
+  /// ni ya kudumu - haiwezi kutenduliwa.
+  Future<void> deleteProperty(int id) async {
+    final response = await http.delete(Uri.parse('$baseUrl/admin/properties/$id'), headers: _headers);
+    _checkStatus(response);
+  }
+
   // --- Analytics ---------------------------------------------------------
 
   Future<AnalyticsSummary> getAnalyticsSummary() async {

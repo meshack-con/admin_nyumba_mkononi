@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import 'all_properties_screen.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
 import 'pending_properties_screen.dart';
@@ -27,8 +28,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = const [DashboardScreen(), PendingPropertiesScreen()];
-    final titles = const ['Dashboard', 'Matangazo Yanayosubiri'];
+    final screens = const [DashboardScreen(), PendingPropertiesScreen(), AllPropertiesScreen()];
+    final titles = const ['Dashboard', 'Matangazo Yanayosubiri', 'Nyumba Zote'];
 
     return Scaffold(
       appBar: AppBar(
@@ -44,6 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.pending_actions), label: 'Pending'),
+          NavigationDestination(icon: Icon(Icons.home_work), label: 'Nyumba Zote'),
         ],
       ),
     );

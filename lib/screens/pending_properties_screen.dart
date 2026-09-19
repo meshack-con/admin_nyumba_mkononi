@@ -4,6 +4,7 @@ import '../config.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../utils/time_format.dart';
 import 'property_detail_screen.dart';
 
 class PendingPropertiesScreen extends StatefulWidget {
@@ -101,7 +102,9 @@ class _PendingPropertiesScreenState extends State<PendingPropertiesScreen> {
                     )
                   : const Icon(Icons.home, size: 40),
               title: Text(p.jina, style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text('${p.aina} · ${p.mode} · ${p.locationLabel}\nTSh ${p.price}'),
+              subtitle: Text(
+                '${p.aina} · ${p.mode} · ${p.locationLabel}\nTSh ${p.price} · ${timeAgo(p.createdAt)}',
+              ),
               isThreeLine: true,
               trailing: const Icon(Icons.chevron_right),
               onTap: () async {
