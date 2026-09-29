@@ -1,10 +1,10 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
 import '../models/analytics.dart';
+import '../models/owner_account.dart';
 import '../models/property.dart';
 
 class ApiException implements Exception {
@@ -82,8 +82,19 @@ class ApiService {
     return _decodeList(response).map((e) => AdminProperty.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  /// Admin anaweka nyumba moja kwa moja kwa niaba ya mmiliki. Hakuna malipo,
-  /// na tangazo linaingia kama 'approved' - linaonekana kwa watumiaji mara moja.
+  /// Tafuta akaunti zilizopo (jina, username au namba ya simu) ili kuongeza
+  /// nyumba nyingine kwenye akaunti ya mmiliki aliyeshaundiwa.
+  Future<List<OwnerAccount>> searchUsers(String query) async {
+    final uri = Uri.parse('$baseUrl/admin/users').replace(queryParameters: {'q': query});
+    final response = await http.get(uri, headers: _headers);
+    return _decodeList(response).map((e) => OwnerAccount.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Admin anaweka nyumba kwa niaba ya mmiliki. Hakuna malipo, na tangazo
+  /// linaingia kama 'approved' - linaonekana kwa watumiaji mara moja.
+  ///
+  /// Mmiliki: TUMA AIDHA [ownerId] (akaunti iliyopo) AU taarifa za akaunti
+  /// mpya ([ownerJina], [ownerSimu], [ownerUsername], [ownerPassword]).
   /// Picha lazima ziwe 3 (kama ilivyo kwa watumiaji wa kawaida).
   Future<AdminProperty> createProperty({
     required String jina,
@@ -95,8 +106,11 @@ class ApiService {
     required double longitude,
     required Map<String, bool> amenities,
     required String description,
-    required String ownerJina,
-    required String ownerSimu,
+    int? ownerId,
+    String? ownerJina,
+    String? ownerSimu,
+    String? ownerUsername,
+    String? ownerPassword,
     String? ownerEmail,
     String? ownerEneo,
     required List<Uint8List> photos,
@@ -114,8 +128,11 @@ class ApiService {
       'latitude': '$latitude',
       'longitude': '$longitude',
       'description': description,
-      'owner_jina': ownerJina,
-      'owner_simu': ownerSimu,
+      if (ownerId != null) 'owner_id': '$ownerId',
+      if (ownerJina != null) 'owner_jina': ownerJina,
+      if (ownerSimu != null) 'owner_simu': ownerSimu,
+      if (ownerUsername != null) 'owner_username': ownerUsername,
+      if (ownerPassword != null) 'owner_password': ownerPassword,
       if (ownerEmail != null && ownerEmail.isNotEmpty) 'owner_email': ownerEmail,
       if (ownerEneo != null && ownerEneo.isNotEmpty) 'owner_eneo': ownerEneo,
     });
