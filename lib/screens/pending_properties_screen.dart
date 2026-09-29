@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config.dart';
+import '../utils/media_utils.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
@@ -84,7 +84,7 @@ class _PendingPropertiesScreenState extends State<PendingPropertiesScreen> {
         itemCount: _properties.length,
         itemBuilder: (context, index) {
           final p = _properties[index];
-          final thumbnail = p.photoUrls.isNotEmpty ? '$baseUrl${p.photoUrls.first}' : null;
+          final thumbnail = p.photoUrls.isNotEmpty ? resolveMediaUrl(p.photoUrls.first) : null;
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ListTile(
