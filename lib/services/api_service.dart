@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 import '../config.dart';
@@ -78,6 +80,52 @@ class ApiService {
   Future<List<AdminProperty>> getPendingProperties() async {
     final response = await http.get(Uri.parse('$baseUrl/admin/properties/pending'), headers: _headers);
     return _decodeList(response).map((e) => AdminProperty.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Admin anaweka nyumba moja kwa moja kwa niaba ya mmiliki. Hakuna malipo,
+  /// na tangazo linaingia kama 'approved' - linaonekana kwa watumiaji mara moja.
+  /// Picha lazima ziwe 3 (kama ilivyo kwa watumiaji wa kawaida).
+  Future<AdminProperty> createProperty({
+    required String jina,
+    required String aina,
+    required String mode,
+    required int price,
+    required String locationLabel,
+    required double latitude,
+    required double longitude,
+    required Map<String, bool> amenities,
+    required String description,
+    required String ownerJina,
+    required String ownerSimu,
+    String? ownerEmail,
+    String? ownerEneo,
+    required List<Uint8List> photos,
+    required List<String> photoNames,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl/admin/properties'));
+    // Content-Type ya multipart huwekwa na MultipartRequest yenyewe.
+    request.headers['Authorization'] = 'Bearer $token';
+    request.fields.addAll({
+      'jina': jina,
+      'aina': aina,
+      'mode': mode,
+      'price': '$price',
+      'location_label': locationLabel,
+      'latitude': '$latitude',
+      'longitude': '$longitude',
+      'description': description,
+      'owner_jina': ownerJina,
+      'owner_simu': ownerSimu,
+      if (ownerEmail != null && ownerEmail.isNotEmpty) 'owner_email': ownerEmail,
+      if (ownerEneo != null && ownerEneo.isNotEmpty) 'owner_eneo': ownerEneo,
+    });
+    amenities.forEach((key, value) => request.fields[key] = '$value');
+    for (var i = 0; i < photos.length; i++) {
+      request.files.add(http.MultipartFile.fromBytes('photos', photos[i], filename: photoNames[i]));
+    }
+    final streamed = await request.send().timeout(const Duration(minutes: 3));
+    final response = await http.Response.fromStream(streamed);
+    return AdminProperty.fromJson(_decodeObject(response));
   }
 
   Future<AdminProperty> approveProperty(int id) async {
