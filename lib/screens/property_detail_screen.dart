@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 
-import '../config.dart';
 import '../models/property.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../utils/time_format.dart';
+import '../widgets/photo_gallery.dart';
+import '../widgets/verification_document.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final AdminProperty property;
@@ -43,6 +43,36 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// Uthibitisho kabla ya kuruhusu/kukataa - admin aone tahadhari ikiwa
+  /// hakuna hati ya umiliki.
+  Future<void> _confirmDecision(bool approve) async {
+    final p = widget.property;
+    final hasDoc = p.verificationDocUrl != null && p.verificationDocUrl!.isNotEmpty;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(approve ? 'Ruhusu Tangazo' : 'Kataa Tangazo'),
+        content: Text(
+          approve
+              ? 'Tangazo la "${p.jina}" litaonekana kwa umma na mmiliki atapata arifa.'
+                  '${hasDoc ? '' : '\n\nTahadhari: hakuna hati ya umiliki iliyotumwa.'}'
+              : 'Tangazo la "${p.jina}" litakataliwa na mmiliki atapata arifa.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Ghairi')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              approve ? 'Ruhusu' : 'Kataa',
+              style: TextStyle(color: approve ? Colors.teal : Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _decide(approve);
   }
 
   Future<void> _confirmDelete() async {
@@ -107,27 +137,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          if (p.photoUrls.isNotEmpty)
-            SizedBox(
-              height: 220,
-              child: PageView(
-                children: p.photoUrls
-                    .map(
-                      (url) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: Image.network(
-                            '$baseUrl$url',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 60)),
-                          ),
-                        ),
-                      ),
-                    )
-                    .toList(),
-              ),
-            ),
+          Text('Picha za nyumba (${p.photoUrls.length})', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          PropertyPhotoGallery(urls: p.photoUrls),
           const SizedBox(height: 16),
           Text(p.jina, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
@@ -165,31 +177,30 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           const SizedBox(height: 4),
           Text(p.description),
           const SizedBox(height: 16),
-          const Text('Hati ya Uthibitisho', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text('Hati ya Umiliki', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          if (p.verificationDocUrl != null && p.verificationDocUrl!.isNotEmpty)
-            _DocPreview(url: '$baseUrl${p.verificationDocUrl}')
-          else
-            const Text('Hakuna hati iliyotumwa'),
+          VerificationDocumentSection(url: p.verificationDocUrl, propertyId: p.id),
           const SizedBox(height: 32),
-          if (p.status == 'pending')
+          if (p.status == 'pending' || p.status == 'rejected')
             Row(
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _busy ? null : () => _decide(false),
-                    icon: const Icon(Icons.close, color: Colors.red),
-                    label: const Text('Kataa', style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: Colors.red),
+                if (p.status == 'pending') ...[
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _busy ? null : () => _confirmDecision(false),
+                      icon: const Icon(Icons.close, color: Colors.red),
+                      label: const Text('Kataa', style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: Colors.red),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
+                ],
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: _busy ? null : () => _decide(true),
+                    onPressed: _busy ? null : () => _confirmDecision(true),
                     icon: _busy
                         ? const SizedBox(
                             height: 16,
@@ -200,13 +211,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     label: const Text('Ruhusu'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.teal,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
                 ),
               ],
             ),
-          if (p.status == 'pending') const SizedBox(height: 12),
+          if (p.status == 'pending' || p.status == 'rejected') const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -227,45 +239,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ],
       ),
-    );
-  }
-}
-
-class _DocPreview extends StatelessWidget {
-  final String url;
-  const _DocPreview({required this.url});
-
-  bool get _isImage {
-    final lower = url.toLowerCase();
-    return lower.endsWith('.jpg') || lower.endsWith('.jpeg') || lower.endsWith('.png') || lower.endsWith('.webp');
-  }
-
-  Future<void> _open() async {
-    final uri = Uri.parse(url);
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isImage) {
-      return GestureDetector(
-        onTap: _open,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            url,
-            height: 200,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, size: 60)),
-          ),
-        ),
-      );
-    }
-    return OutlinedButton.icon(
-      onPressed: _open,
-      icon: const Icon(Icons.picture_as_pdf),
-      label: const Text('Fungua Hati (PDF)'),
     );
   }
 }
