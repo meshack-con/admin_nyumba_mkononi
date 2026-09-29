@@ -167,7 +167,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           const SizedBox(height: 16),
           const Text('Hati ya Uthibitisho', style: TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          if (p.verificationDocUrl != null)
+          if (p.verificationDocUrl != null && p.verificationDocUrl!.isNotEmpty)
             _DocPreview(url: '$baseUrl${p.verificationDocUrl}')
           else
             const Text('Hakuna hati iliyotumwa'),
